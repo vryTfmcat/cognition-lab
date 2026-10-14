@@ -1,0 +1,11 @@
+node_modules/
+dist/
+test-results/
+.playwright/
+*.local
+qa/
+.netlify/
+.env
+.env.*
+!.env.example
+.openai/*.tar.gz
