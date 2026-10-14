@@ -13,6 +13,10 @@ export { unicode };
 export const kindLabels: Record<string, string> = {
   quick: "三题快速体验",
   twelve: "十二题 · 表征与操作",
+  "position-recall": "指定位置回忆",
+  "change-location": "变化定位",
+  "spatial-pairing": "空间位置配对",
+  "reverse-rebuild": "逆序重建",
   unicode: "Unicode 序列再认",
   "unicode-geometry": "几何字符序列",
   "unicode-math": "数学字符序列",
@@ -355,6 +359,54 @@ export function unicodeBank(seed: number, count = 12, kind = "unicode"): Task[] 
     };
   });
 }
+export const introKinds = ["position-recall", "change-location", "spatial-pairing", "reverse-rebuild"];
+export function introBank(kind: string, seed: number, count: number): Task[] {
+  if (!introKinds.includes(kind) || !Number.isInteger(count) || count < 1 || count > 30)
+    throw new Error("无效的入门专项配置");
+  const symbols = ["○", "△", "□", "◇", "▲", "■", "●", "◆"];
+  const seen = new Set<string>();
+  return Array.from({length:count}, (_, i) => {
+    const taskSeed = (seed + i * 1009) >>> 0;
+    const query = shuffle([0,1,2,3], taskSeed + 53)[0];
+    let pool: string[] = [];
+    let materialSeed = taskSeed;
+    for (let attempt = 0; attempt < 1000; attempt++) {
+      materialSeed = taskSeed + attempt * 7919;
+      pool = shuffle(symbols, materialSeed).slice(0,5);
+      const key = pool.slice(0,4).join("|");
+      if (!seen.has(key)) { seen.add(key); break; }
+      if (attempt === 999) throw new Error("无法生成不重复的入门材料");
+    }
+    const seq = pool.slice(0,4);
+    const positions = ["左上", "右上", "左下", "右下"];
+    const version = "intro-special-v1.0";
+    let task: Task;
+    if (kind === "position-recall") {
+      task = fixed(`${kind}-${i+1}`, kindLabels[kind], "记住字符和顺序",
+        `刚才第${query+1}个字符是什么？`, d(seq.join(" ")), seq.map(d), query,
+        `原排列为 ${seq.join(" ")}，第${query+1}个字符是 ${seq[query]}。`, true, version);
+    } else if (kind === "change-location") {
+      const changed = [...seq]; changed[query] = pool[4];
+      task = fixed(`${kind}-${i+1}`, kindLabels[kind], "记住原始排列",
+        "对照下方的新排列，哪一位的字符被替换了？每题只替换一位。", d(seq.join(" ")),
+        [1,2,3,4].map(n=>d(`第${n}位`)), query,
+        `第${query+1}位由 ${seq[query]} 变为 ${pool[4]}，其余位置不变。`, true, version);
+      task.answerMaterial = d(changed.join(" "));
+    } else if (kind === "spatial-pairing") {
+      task = fixed(`${kind}-${i+1}`, kindLabels[kind], "记住字符所在的位置",
+        `刚才${positions[query]}角的字符是什么？`, grid([seq.slice(0,2),seq.slice(2)]), seq.map(d), query,
+        `${positions[query]}角对应字符 ${seq[query]}。`, true, version);
+    } else {
+      const reversed = [...seq].reverse();
+      task = fixed(`${kind}-${i+1}`, kindLabels[kind], "记住排列，稍后倒序重建",
+        "只把排列顺序反过来，字符本身不旋转，结果是什么？", d(seq.join(" ")),
+        [reversed,seq,[...seq.slice(1),seq[0]],[reversed[1],reversed[0],reversed[2],reversed[3]]].map(v=>d(v.join(" "))),0,
+        `原排列 ${seq.join(" ")} 从右往左读取，得到 ${reversed.join(" ")}；每个字符本身不改变。`, true, version);
+    }
+    task.generation = {seed:taskSeed,generatorVersion:version,parameters:{kind,queryIndex:query,sequenceLength:4,materialSeed}};
+    return task;
+  });
+}
 export const demo = fixed(
   "demo",
   "样例",
@@ -367,7 +419,7 @@ export const demo = fixed(
   true,
   "demo-v1",
 );
-export const defaultCounts: Record<string, number> = {quick:3,twelve:12,unicode:12,"unicode-geometry":6,"unicode-math":6,"unicode-arrows":6,"unicode-script":6,mixed:9,polygon:6,smooth:6,curve:6};
+export const defaultCounts: Record<string, number> = {quick:3,twelve:12,"position-recall":6,"change-location":6,"spatial-pairing":6,"reverse-rebuild":6,unicode:12,"unicode-geometry":6,"unicode-math":6,"unicode-arrows":6,"unicode-script":6,mixed:9,polygon:6,smooth:6,curve:6};
 export function maximumCount(kind: string) { return kind === "quick" ? 3 : kind === "twelve" ? 12 : 30; }
 export function makeSession(
   kind: string,
@@ -380,6 +432,7 @@ export function makeSession(
   let tasks: Task[];
   if (kind === "quick") tasks = quickBank();
   else if (kind === "twelve") tasks = twelveBank();
+  else if (introKinds.includes(kind)) tasks = introBank(kind, seed, questionCount);
   else if (isUnicodeKind(kind)) tasks = unicodeBank(seed, questionCount, kind);
   else {
     const families: Family[] = kind === "mixed"
@@ -403,7 +456,7 @@ export function makeSession(
     difficulty: tasks.some(t=>t.stimulus) ? difficulty : undefined,
     runnerVersion: "runner-v2-inline-optional",
     strategyTiming: "during-observation-or-answer",
-    batch: (mode === "test" ? (isUnicodeKind(kind) ? "frozen-20261015-unicode-v2" : "frozen-20261014-v4") : `practice-${seed}`) + (tasks.some(t=>t.stimulus)?`-${difficulty}`:""),
+    batch: (mode === "test" ? (introKinds.includes(kind) ? "frozen-20261015-intro-v1" : isUnicodeKind(kind) ? "frozen-20261015-unicode-v2" : "frozen-20261014-v4") : `practice-${seed}`) + (tasks.some(t=>t.stimulus)?`-${difficulty}`:""),
     questionCount,
     createdAt: new Date().toISOString(),
     tasks,
@@ -412,6 +465,7 @@ export function makeSession(
     rows: [],
     current: emptyCurrent(),
     familiarity: {},
+    familiarityPolicy: isUnicodeKind(kind) ? "optional" : undefined,
     completed: false,
     feedback: "",
     aid: "",

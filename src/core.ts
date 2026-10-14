@@ -34,6 +34,8 @@ export type Task = {
   title: string;
   prompt: string;
   material: Display;
+  answerMaterial?: Display;
+  generation?: { seed: number; generatorVersion: string; parameters: Record<string, string | number> };
   hide: boolean;
   exposureMs: number;
   options: Option[];
@@ -291,6 +293,7 @@ export type Session = {
   };
   draft?: { strategies: string[]; description: string; aid: string };
   familiarity: Record<string, string>;
+  familiarityPolicy?: "optional";
   completed: boolean;
   feedback: string;
   aid: string;
@@ -376,7 +379,7 @@ export function csv(s: Session) {
           s.batch,
           r.taskId,
           t.group,
-          t.stimulus?.seed,
+          t.stimulus?.seed ?? t.generation?.seed,
           r.selectedId,
           t.correctId,
           r.correct,
@@ -399,7 +402,7 @@ export function csv(s: Session) {
                   })),
               )
             : "",
-          t.stimulus?.generatorVersion,
+          t.stimulus?.generatorVersion ?? t.generation?.generatorVersion,
           t.stimulus?.rngVersion,
           JSON.stringify(t.options.map((o) => o.id)),
           JSON.stringify(s.familiarity),

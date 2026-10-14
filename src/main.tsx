@@ -457,8 +457,9 @@ function App() {
   }
   function finish() {
     if (!session) return;
-    const done = {
+    const done: Session = {
       ...session,
+      familiarityPolicy: isUnicodeKind(session.kind) ? "optional" : session.familiarityPolicy,
       draft: undefined,
       completed: true,
       phase: "results",
@@ -741,6 +742,10 @@ function App() {
                     "记忆、变换、关系迁移、可逆性，循序探索四类任务。",
                     "↔",
                   )}
+                  {card("position-recall", "6题", "记住4个字符的顺序，再回忆其中指定位置的字符。", "◇")}
+                  {card("change-location", "6题", "先记住原排列，再看只替换一位的新排列，找出变化位置。", "⇄")}
+                  {card("spatial-pairing", "6题", "观察2×2字符布局，隐藏后找出指定角落的字符。", "□")}
+                  {card("reverse-rebuild", "6题", "记住排列，再将顺序倒过来；字符本身不旋转。", "↶")}
                 </>
               ) : section === "unicode" ? (
                 <>
@@ -899,10 +904,10 @@ function App() {
               <>
                 <p className="eyebrow">选择阶段</p>
                 <h1 tabIndex={-1}>{task.prompt}</h1>
-                {!task.hide ? (
+                {!task.hide || task.answerMaterial ? (
                   <div className="reference" ref={materialRef}>
-                    <span>题目材料</span>
-                    <Visual value={task.material} />
+                    <span>{task.answerMaterial ? "变化后的排列（原排列已隐藏）" : "题目材料"}</span>
+                    <Visual value={task.answerMaterial ?? task.material} />
                   </div>
                 ) : (
                   <p className="muted">原材料已隐藏，请选择一个答案。</p>
@@ -1009,7 +1014,7 @@ function App() {
                 {isUnicodeKind(session.kind) && (
                   <>
                     <p className="muted">
-                      请记录本轮见过的字符对你的熟悉程度；任务中不会预先提示。
+                      字符熟悉度（选填）：可只填部分，也可全部跳过，直接查看结果。
                     </p>
                     <div className="familiarity">
                       {unicode
@@ -1034,7 +1039,7 @@ function App() {
                                 })
                               }
                             >
-                              <option value="">请选择</option>
+                              <option value="">未填写（可跳过）</option>
                               <option>熟悉</option>
                               <option>见过但不熟悉</option>
                               <option>首次见到</option>
@@ -1057,15 +1062,6 @@ function App() {
                 </label>
                 <button
                   className="primary"
-                  disabled={
-                    isUnicodeKind(session.kind) &&
-                    unicode.some(
-                      (u) =>
-                        session.tasks.some((t) =>
-                          t.unicodeIds?.includes(u.symbol_id),
-                        ) && !session.familiarity[u.symbol_id],
-                    )
-                  }
                   onClick={finish}
                 >
                   查看本轮结果 →
