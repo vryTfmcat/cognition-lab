@@ -6,11 +6,13 @@
 
 - GitHub（私有源码）：https://github.com/vryTfmcat/cognition-lab
 - Sites：https://xingji-cognition-lab.vrytfmcat.chatgpt.site （首次发布为仅所有者可访问）
-- Netlify 项目：https://app.netlify.com/projects/xingji-cognition-lab （部署状态见发布记录）
+- Netlify：https://xingji-cognition-lab.netlify.app （公开访问）
 
 两个托管站点运行同一套前端，各域名的浏览器记录相互独立。发布不会自动收集参与者结果，仍使用本机浏览器保存和JSON/CSV导出。
 
 Netlify 构建命令为 `npm run build`，发布目录为 `dist`。本地 `.netlify/`、环境变量、QA截图和结果不纳入源码仓库。Sites 的身份保存在 `.openai/hosting.json`。
+
+首次Netlify发布使用本机已构建文件手动上传，尚未连接GitHub自动部署。修改源码并推送GitHub后，还需分别更新两个托管平台。
 
 ## 启动
 
