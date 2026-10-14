@@ -2,6 +2,16 @@
 
 中文认知练习的本地交互原型。React + TypeScript + Vite + SVG；无需账号或后端。
 
+## 发布与源码
+
+- GitHub（私有源码）：https://github.com/vryTfmcat/cognition-lab
+- Sites：https://xingji-cognition-lab.vrytfmcat.chatgpt.site （首次发布为仅所有者可访问）
+- Netlify 项目：https://app.netlify.com/projects/xingji-cognition-lab （部署状态见发布记录）
+
+两个托管站点运行同一套前端，各域名的浏览器记录相互独立。发布不会自动收集参与者结果，仍使用本机浏览器保存和JSON/CSV导出。
+
+Netlify 构建命令为 `npm run build`，发布目录为 `dist`。本地 `.netlify/`、环境变量、QA截图和结果不纳入源码仓库。Sites 的身份保存在 `.openai/hosting.json`。
+
 ## 启动
 
 在此目录打开 PowerShell：
@@ -19,7 +29,7 @@ npm.cmd run build
 npm.cmd run preview -- --port 4173
 ```
 
-若要由同一局域网手机访问，运行 `npm.cmd run dev -- --host 0.0.0.0 --port 5173`，使用电脑局域网 IP。此命令需你自行允许本地防火墙对应访问；不等同于公网部署。正式朋友分享需后续托管。
+若要由同一局域网手机访问，运行 `npm.cmd run dev -- --host 0.0.0.0 --port 5173`，使用电脑局域网 IP。此命令需你自行允许本地防火墙对应访问；不等同于公网部署。公网地址见上方发布信息。
 
 ## 内容
 
