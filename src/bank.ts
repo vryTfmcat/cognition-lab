@@ -14,6 +14,10 @@ export const kindLabels: Record<string, string> = {
   quick: "三题快速体验",
   twelve: "十二题 · 表征与操作",
   unicode: "Unicode 序列再认",
+  "unicode-geometry": "几何字符序列",
+  "unicode-math": "数学字符序列",
+  "unicode-arrows": "箭头字符序列",
+  "unicode-script": "陌生文字序列",
   mixed: "混合家族再认",
   polygon: "凹多边形练习",
   smooth: "圆滑轮廓练习",
@@ -304,10 +308,29 @@ export function twelveBank(): Task[] {
     ),
   ];
 }
-export function unicodeBank(seed: number): Task[] {
-  const chars = shuffle(unicode, seed);
-  return Array.from({ length: 6 }, (_, i) => {
-    const pool = chars.slice(i * 5, i * 5 + 5),
+export const unicodeCategories: Record<string, string> = {
+  "unicode-geometry": "几何", "unicode-math": "数学",
+  "unicode-arrows": "箭头", "unicode-script": "陌生文字",
+};
+export function isUnicodeKind(kind: string) {
+  return kind === "unicode" || Object.hasOwn(unicodeCategories, kind);
+}
+export function unicodeBank(seed: number, count = 12, kind = "unicode"): Task[] {
+  if (!isUnicodeKind(kind) || !Number.isInteger(count) || count < 1 || count > 30)
+    throw new Error("无效的Unicode轮次配置");
+  const category = unicodeCategories[kind];
+  const chars = category ? unicode.filter(c => c.category === category) : unicode;
+  const seen = new Set<string>();
+  return Array.from({ length: count }, (_, i) => {
+    let pool: typeof unicode = [];
+    // Retain seeded generation and reject repeated target sequences within a round.
+    for (let attempt = 0; attempt < 1000; attempt++) {
+      pool = shuffle(chars, seed + i * 1009 + attempt * 7919).slice(0, 5);
+      const key = pool.slice(0, 4).map(c => c.symbol_id).join("|");
+      if (!seen.has(key)) { seen.add(key); break; }
+      if (attempt === 999) throw new Error("无法生成不重复的Unicode材料");
+    }
+    const
       seq = pool.slice(0, 4).map((c) => c.char);
     const variants = [
       seq,
@@ -317,8 +340,8 @@ export function unicodeBank(seed: number): Task[] {
     ];
     return {
       ...fixed(
-        `u${i + 1}`,
-        "Unicode 再认",
+        `u2-${kind}-${i + 1}`,
+        category ? `Unicode · ${category}` : "Unicode · 混合",
         "记住字符顺序",
         "选择与刚才完全相同的字符序列。",
         d(seq.join(" ")),
@@ -326,7 +349,7 @@ export function unicodeBank(seed: number): Task[] {
         0,
         "正确选项的字符身份和排列顺序都与原序列一致。",
         true,
-        "unicode-pilot-v1.0",
+        "unicode-pilot-v2.0",
       ),
       unicodeIds: pool.map((c) => c.symbol_id),
     };
@@ -344,8 +367,8 @@ export const demo = fixed(
   true,
   "demo-v1",
 );
-export const defaultCounts: Record<string, number> = {quick:3,twelve:12,unicode:6,mixed:9,polygon:6,smooth:6,curve:6};
-export function maximumCount(kind: string) { return kind === "quick" ? 3 : kind === "twelve" ? 12 : kind === "unicode" ? 6 : 30; }
+export const defaultCounts: Record<string, number> = {quick:3,twelve:12,unicode:12,"unicode-geometry":6,"unicode-math":6,"unicode-arrows":6,"unicode-script":6,mixed:9,polygon:6,smooth:6,curve:6};
+export function maximumCount(kind: string) { return kind === "quick" ? 3 : kind === "twelve" ? 12 : 30; }
 export function makeSession(
   kind: string,
   mode: Session["mode"],
@@ -357,7 +380,7 @@ export function makeSession(
   let tasks: Task[];
   if (kind === "quick") tasks = quickBank();
   else if (kind === "twelve") tasks = twelveBank();
-  else if (kind === "unicode") tasks = unicodeBank(seed);
+  else if (isUnicodeKind(kind)) tasks = unicodeBank(seed, questionCount, kind);
   else {
     const families: Family[] = kind === "mixed"
       ? shuffle(Array.from({length:questionCount},(_,i)=>(["polygon","smooth","mixed"] as Family[])[i%3]),seed)
@@ -380,7 +403,7 @@ export function makeSession(
     difficulty: tasks.some(t=>t.stimulus) ? difficulty : undefined,
     runnerVersion: "runner-v2-inline-optional",
     strategyTiming: "during-observation-or-answer",
-    batch: (mode === "test" ? "frozen-20261014-v4" : `practice-${seed}`) + (tasks.some(t=>t.stimulus)?`-${difficulty}`:""),
+    batch: (mode === "test" ? (isUnicodeKind(kind) ? "frozen-20261015-unicode-v2" : "frozen-20261014-v4") : `practice-${seed}`) + (tasks.some(t=>t.stimulus)?`-${difficulty}`:""),
     questionCount,
     createdAt: new Date().toISOString(),
     tasks,

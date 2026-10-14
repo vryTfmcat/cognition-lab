@@ -247,6 +247,7 @@ main {
   gap: 30px;
 }
 .tabs button {
+  white-space: nowrap;
   padding: 18px 0;
   background: transparent;
   color: #88958b;
@@ -1010,10 +1011,13 @@ select {
     padding: 23px;
   }
   .section-bar {
-    align-items: center;
+    align-items: flex-start;
+    flex-direction: column;
     gap: 8px;
   }
   .tabs {
+    width: 100%;
+    overflow-x: auto;
     gap: 18px;
   }
   .tabs button {

@@ -15,7 +15,7 @@ import {
   type Difficulty,
   difficultyLabel,
 } from "./core";
-import { kindLabels, makeSession, demo, unicode, defaultCounts, maximumCount } from "./bank";
+import { kindLabels, makeSession, demo, unicode, defaultCounts, maximumCount, isUnicodeKind } from "./bank";
 import "./style.css";
 import { loadRecords, saveSession, saveHistory, interruptedSession, retrySession, clearRecords, endUnfinishedSession } from "./storage";
 function Visual({ value, small = false }: { value: Display; small?: boolean }) {
@@ -480,7 +480,7 @@ function App() {
         ? JSON.stringify(
             {
               ...session,
-              unicodeManifest: session.kind === "unicode" ? unicode : undefined,
+              unicodeManifest: isUnicodeKind(session.kind) ? unicode : undefined,
             },
             null,
             2,
@@ -606,7 +606,7 @@ function App() {
             >+</button>
           </div>
         </div>
-        <div className="card-bottom"><span>{kind === "unicode" ? "试用材料" : "探索练习"}</span><button className="text-button" onClick={()=>start(kind)} disabled={!fontReady}>开始体验 ↗</button></div>
+        <div className="card-bottom"><span>{isUnicodeKind(kind) ? "字符练习" : "探索练习"}</span><button className="text-button" onClick={()=>start(kind)} disabled={!fontReady}>开始体验 ↗</button></div>
       </article>
     );
   };
@@ -679,6 +679,12 @@ function App() {
                 >
                   02 图形再认实验
                 </button>
+                <button
+                  className={section === "unicode" ? "active" : ""}
+                  onClick={() => setSection("unicode")}
+                >
+                  03 Unicode 字符实验
+                </button>
               </div>
               <div className="mode" aria-label="反馈模式">
                 <button
@@ -705,12 +711,14 @@ function App() {
             </div>}
             <div className="section-intro">
               <h2>
-                {section === "intro" ? "从熟悉的符号开始" : "让轮廓留在脑海里"}
+                {section === "intro" ? "从熟悉的符号开始" : section === "unicode" ? "Unicode 字符实验室" : "让轮廓留在脑海里"}
               </h2>
               <p>
                 {section === "intro"
                   ? "从顺序记忆到关系操作，体验不同的表征任务。"
-                  : "三个图形家族，四个相似选项。留意你记住了哪些细节。"}
+                  : section === "unicode"
+                    ? "混合探索，或专注一类字符。每题观察4个字符的顺序，10秒后从四个选项中找回原序列；每轮可选1—30题。"
+                    : "三个图形家族，四个相似选项。留意你记住了哪些细节。"}
                 <span>
                   {mode === "practice"
                     ? " · 作答后反馈"
@@ -733,12 +741,14 @@ function App() {
                     "记忆、变换、关系迁移、可逆性，循序探索四类任务。",
                     "↔",
                   )}
-                  {card(
-                    "unicode",
-                    "6题 · 4–6分钟",
-                    "遇见不常见的字符，观察熟悉程度如何影响记忆。",
-                    "⟐",
-                  )}
+                </>
+              ) : section === "unicode" ? (
+                <>
+                  {card("unicode", "12题", "从30个精选字符中混合取材，观察跨类别序列如何被记住。", "⟐")}
+                  {card("unicode-geometry", "6题", "只使用几何字符，留意填充、朝向和内部结构。", "◬")}
+                  {card("unicode-math", "6题", "只使用数学字符，尝试记住笔画、关系和排列顺序。", "∩")}
+                  {card("unicode-arrows", "6题", "只使用箭头字符，区分方向、弯折与箭头结构。", "↔")}
+                  {card("unicode-script", "6题", "只使用精选亚美尼亚字符；熟悉与否由你在轮次结束时记录。", "Ա")}
                 </>
               ) : (
                 <>
@@ -996,7 +1006,7 @@ function App() {
                     <option>不确定</option>
                   </select>
                 </label>
-                {session.kind === "unicode" && (
+                {isUnicodeKind(session.kind) && (
                   <>
                     <p className="muted">
                       请记录本轮见过的字符对你的熟悉程度；任务中不会预先提示。
@@ -1048,7 +1058,7 @@ function App() {
                 <button
                   className="primary"
                   disabled={
-                    session.kind === "unicode" &&
+                    isUnicodeKind(session.kind) &&
                     unicode.some(
                       (u) =>
                         session.tasks.some((t) =>
@@ -1188,7 +1198,7 @@ function App() {
                         {
                           ...session,
                           unicodeManifest:
-                            session.kind === "unicode" ? unicode : undefined,
+                            isUnicodeKind(session.kind) ? unicode : undefined,
                         },
                         null,
                         2,
@@ -1260,7 +1270,7 @@ function App() {
                 / mulberry32-v1。
               </p>
               <p>
-                Unicode 试用池含30个字符，来自本地Unicode
+                Unicode 独立板块提供混合与四类专项序列练习，每轮1—30题（unicode-pilot-v2.0）。试用池含30个字符，来自本地Unicode
                 17精选与全码表，字形由本地 Noto 字体呈现。字体许可证随源码保存。
               </p>
               <h2>你的数据</h2>
@@ -1293,7 +1303,7 @@ function App() {
             <p>“{session.label}”已完成 {session.rows.length}/{session.tasks.length} 题。结束后将丢弃本轮未完成进度，不能继续本轮。已完成的历史记录会保留。</p>
             {pendingKind && <p>接下来开始：{kindLabels[pendingKind]}。</p>}
             {session.rows.length > 0 && <button className="text-button" onClick={() => download("json")}>先导出已答内容 JSON ↓</button>}
-            {fallback && session.rows.length > 0 && <label className="field">无法下载时，可复制已答内容<textarea readOnly value={JSON.stringify({...session,unicodeManifest:session.kind === "unicode" ? unicode : undefined},null,2)}/></label>}
+            {fallback && session.rows.length > 0 && <label className="field">无法下载时，可复制已答内容<textarea readOnly value={JSON.stringify({...session,unicodeManifest:isUnicodeKind(session.kind) ? unicode : undefined},null,2)}/></label>}
             <div className="actions">
               <button className="secondary" autoFocus onClick={() => { setConfirmEnd(false); setPendingKind(null); }}>暂不结束</button>
               <button className="primary" onClick={endCurrent}>{pendingKind ? "结束并开始新实验" : "结束并返回首页"}</button>
